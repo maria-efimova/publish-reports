@@ -49,7 +49,6 @@ pipeline {
             dir("${env.WORKSPACE}"){
                 bat 'venv/Scripts/coverage.exe xml'
             }
-
             junit allowEmptyResults: true, testResults: '**/pytest_junit.xml'
 
             junit allowEmptyResults: true, testResults: '**/pylint_junit.xml'
