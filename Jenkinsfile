@@ -10,15 +10,15 @@ pipeline {
             steps {
                 dir("${env.WORKSPACE}"){
                     bat '"C:\\Users\\maria\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe" -m venv venv'
-                    bat './venv/bin/pip3 install --upgrade --requirement requirements.txt'
+                    bat 'venv/Scripts/pip3 install --upgrade --requirement requirements.txt'
                 }
             }
         }
         stage('Lint') {
             steps {
                 dir("${env.WORKSPACE}"){
-                    bat 'venv/bin/flake8 --ignore=E501,E231 *.py'
-                    bat 'venv/bin/pylint --errors-only --disable=C0301 --disable=C0326 *.py'
+                    bat 'venv/Scripts/flake8 --ignore=E501,E231 *.py'
+                    bat 'venv/Scripts/pylint --errors-only --disable=C0301 --disable=C0326 *.py'
                 }
             }
         }
@@ -26,7 +26,7 @@ pipeline {
             steps {
                 dir("${env.WORKSPACE}"){
                     bat('''
-                        venv/bin/coverage run -m pytest -v test_*.py \
+                        venv/Scripts/coverage run -m pytest -v test_*.py \
                             --junitxml=pytest_junit.xml
                     ''')
                 }
