@@ -48,7 +48,7 @@ pipeline {
 
     post {
         always {
-            dir("${env.WORKSPACE}/Ch05/05_02-publish-reports"){
+            dir("${env.WORKSPACE}"){
                 bat 'venv/bin/coverage xml'
             }
 
