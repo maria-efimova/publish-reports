@@ -6,7 +6,6 @@ pipeline {
         timeout(time: 12, unit: 'HOURS')
         timestamps()
     }
-
     stages {
         stage('Requirements') {
             steps {
