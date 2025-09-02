@@ -11,7 +11,7 @@ pipeline {
         stage('Requirements') {
             steps {
                 dir("${env.WORKSPACE}"){
-                    bat 'python3 -m venv venv'
+                    bat 'python -m venv venv'
                     bat './venv/bin/pip3 install --upgrade --requirement requirements.txt'
                 }
             }
