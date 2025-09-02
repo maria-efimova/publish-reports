@@ -49,7 +49,7 @@ pipeline {
     post {
         always {
             dir("${env.WORKSPACE}"){
-                bat 'venv/bin/coverage xml'
+                bat 'venv\bin\coverage xml'
             }
 
             junit allowEmptyResults: true, testResults: '**/pytest_junit.xml'
