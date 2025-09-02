@@ -11,7 +11,7 @@ pipeline {
         stage('Requirements') {
             steps {
                 dir("${env.WORKSPACE}"){
-                    bat 'python3 -m venv venv'
+                    bat '"C:\\Users\\maria\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe" -m venv venv'
                     bat './venv/bin/pip3 install --upgrade --requirement requirements.txt'
                 }
             }
