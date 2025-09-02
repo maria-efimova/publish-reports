@@ -1,60 +1,46 @@
 pipeline {
     agent any
-    options {
-        buildDiscarder(logRotator(daysToKeepStr: '10', numToKeepStr: '10'))
-        timeout(time: 12, unit: 'HOURS')
-        timestamps()
+    tools {
+      maven 'Maven-3.8.4'
     }
     stages {
-        stage('Requirements') {
+        stage('Source') {
             steps {
-                dir("${env.WORKSPACE}"){
-                    bat '"C:\\Users\\maria\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe" -m venv venv'
-                    bat 'venv/Scripts/pip3 install --upgrade --requirement requirements.txt'
-                }
+                git branch: 'main',
+                    changelog: false,
+                    poll: false,
+                    url: 'https://github.com/LinkedInLearning/essential-jenkins-2468076.git'
             }
         }
-        stage('Lint') {
+        stage('Clean') {
             steps {
-                dir("${env.WORKSPACE}"){
-                    bat 'venv/Scripts/flake8 --ignore=E501,E231 *.py'
-                    bat 'venv/Scripts/pylint --errors-only --disable=C0301 --disable=C0326 *.py'
+                dir("${env.WORKSPACE}/Ch05/05_04-challenge-create-artifacts-and-reports"){
+                    sh 'mvn clean'
                 }
             }
         }
         stage('Test') {
             steps {
-                dir("${env.WORKSPACE}"){
-                    bat('''
-                        venv/Scripts/coverage run -m pytest -v test_*.py \
-                            --junitxml=pytest_junit.xml
-                    ''')
+                dir("${env.WORKSPACE}/Ch05/05_04-challenge-create-artifacts-and-reports"){
+                    sh 'mvn test'
                 }
             }
         }
-        stage('Build') {
+        stage('Package') {
             steps {
-                echo "Build the application in this step..."
-            }
-        }
-        stage('Deploy') {
-            steps {
-                echo "Deploy the application in this step..."
+                dir("${env.WORKSPACE}/Ch05/05_04-challenge-create-artifacts-and-reports"){
+                    sh 'mvn package -DskipTests'
+                }
             }
         }
     }
-
     post {
         always {
-            dir("${env.WORKSPACE}"){
-                bat 'venv/Scripts/coverage.exe xml'
-            }
-            junit allowEmptyResults: true, testResults: '**/pytest_junit.xml'
+            junit allowEmptyResults: true,
+                testResults: '**/TEST-com.learningjenkins.AppTest.xml'
 
-            junit allowEmptyResults: true, testResults: '**/pylint_junit.xml'
-
-            publishCoverage adapters: [cobertura('**/coverage.xml')],
-                sourceFileResolver: sourceFiles('STORE_LAST_BUILD')
+            archiveArtifacts allowEmptyArchive: true,
+                artifacts: '**/hello-1.0-SNAPSHOT.jar'
         }
     }
 }
