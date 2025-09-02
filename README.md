@@ -1,119 +1,115 @@
-# 05_02 Publish test results and code coverage reports
-## Report formats trigger build
-### JUnit test report format
-JUnit reports are XML documents that describe the results of a test.  The JUnit format was originally developed for Java programs but many other languages have adopted this reporting format.  This makes JUnit the standard for creating test reports.
-- [JUnit](https://junit.org/junit5/)
+# 05_05 Solution Create artifacts and reports
+You’re on a development team working on a new Java application.
 
-### Code coverage formats
-Code coverage measures the effectiveness of a test by tracking the lines of code that are accessed during a test. 
+You've been assigned to develop a Jenkins pipeline that tests the application code and creates a report that the team can review.  Specifically, the test stage creates  test report using the JUnit format.
 
-Two popular code coverage formats are JaCoCo and Cobertura.
+If the tests pass, the pipeline should compile the code into a Java archive and store the JAR file as an artifact.
 
-- [JaCoCo](https://www.jacoco.org/jacoco/)
-- [Cobertura](http://cobertura.github.io/cobertura/)
+## Solution
+- Set up a global tool configuration for Maven.
+    - Select `Manage Jenkins` &rarr; `Global tool configuration` &rarr; `Add Maven`
+    - Name Maven `Maven-3.8.4`
+    - Install from Apache
+    - Version 3.8.4
+    - `Save`
 
-## Plugins for reading and publishing reports
-Jenkins uses plugins to read and publish a variety of test and code coverage reports.
+- Make sure the JUnit plugin is installed.
+    - Select `Dashboard` &rarr; `Manage Jenkins` &rarr; `Manage Plugins` &rarr; `Installed`
+    - Filter for "junit"
+    - Confirm "JUnit Plugin" is installed
 
-- [JUnit](https://plugins.jenkins.io/junit/)
-- [Code Coverage API](https://plugins.jenkins.io/code-coverage-api/)
+- Update the pipeline to use the Maven tool configuration.
+    - Select `Dashboard` &rarr; `New Item`
+    - Enter item name
+    - Select `Pipeline` project
+    - `OK`
+    - Copy the pipeline template from the exercise files and paste into the `Pipeline script` section
+        - *UPDATE GIT CALL WITH `credentialsId: 'managedkaos',`*
+    - `Apply`
+    - Select `Pipeline Syntax`; go to newly opened tab
+    - Select `Declarative Directive Generator` &rarr; `tools: Tools` &rarr; `Add` &rarr; `maven: Maven` &rarr; `Maven-3.8.4` &rarr; `Generate Declarative Directive`
+    - Copy snippet; go to previous tab
+    - Paste snippet to replace `// Add a tool configuration here...`
+    - `Save` &rarr; `Build Now`
 
-## Test report and code coverage demo with a Python project
-The code in this directory includes a Python project for a simple API.  The code includes a [Jenkinsfile](./Jenkinsfile) for a pipeline with the following stages:
+- Update the pipeline to call Maven.
+    - Select `Configure`
+    - Uncomment calls to Maven
+    - `Save` &rarr; `Build Now`
 
-```mermaid
-flowchart LR
-    Requirements-->Lint
-    Lint-->Test
-    Test-->Build
-    Build-->Deploy
-```
+- Collect test results from the following location: `**/TEST-com.learningjenkins.AppTest.xml`.
+    - Select `Configure`
+    - Go to pipeline syntax tool tab
+    - Select `Snippet Generator` &rarr; `junit: Archive...` &rarr;
+      - Test report XMLs = `**/TEST-com.learningjenkins.AppTest.xml`
+      - Select `Do not fail the build on empty test results`
+      - `Generate Pipeline Script`
+    - Copy snippet; go to previous tab
+    - Paste snippet to replace `// Add jUnit report collection here...`
+    - `Apply`
 
-|Pipeline stage |Function                                               |
-|:--------------|:------------------------------------------------------| 
-|Requirements   |Sets up a virtual environment and installs dependencies|
-|Lint           |Checks the code for syntax errors                      |
-|Test           |Runs a test suite including code coverage              |
-|Build          |Builds the application                                 |
-|Deploy         |Deploys the application                                |
+- Archive artifacts from the following location: `**/hello-1.0-SNAPSHOT.jar`.
+    - Go to pipeline syntax tool tab
+    - Select `Snippet Generator` &rarr; `archiveArtifacts: Archive...` &rarr;
+      - Files to archive = `**/hello-1.0-SNAPSHOT.jar`
+      - Select `Advanced`
+        - Select `Do not fail build if archiving returns nothing`
+      - `Generate Pipeline Script`
+    - Copy snippet; go to previous tab
+    - Paste snippet to replace `// Add artifact archiving here...`
+    - `Save` &rarr; `Build Now`
+    - Refresh the browser
+
+- Review the test results and the artifacts
 
 
-*If you're following along with the exercise files for this lesson, there are a few things that you'll need to know in advance.*
+## The solution pipeline
+[Follow this link for the Jenkinsfile solution](./Jenkinsfile) or copy it from the code below:
 
-- [ ] The Jenkinsfile is written to be run on a Ubuntu server.
-- [ ] A Windows server may be able to run the project with modifications to the Jenkinsfile.  If you are using windows, fork this repository into your own GitHub account and make modifications as needed.
-- [ ] Python3 must be installed.
-- [ ] Python3 Virtual Environment library must be installed
-- [ ] A `git` executable must be installed.
-- [ ] The JUnit plugin must be installed.
-- [ ] The Code Coverage API plugin must be installed.
-
-## The demo Jenkinsfile
-```
+```Jenkinsfile
 pipeline {
     agent any
-
-    options {
-        buildDiscarder(logRotator(daysToKeepStr: '10', numToKeepStr: '10'))
-        timeout(time: 12, unit: 'HOURS')
-        timestamps()
+    tools {
+      maven 'Maven-3.8.4'
     }
-
-    triggers {
-        cron '@midnight'
-    }
-
     stages {
-        stage('Requirements') {
+        stage('Source') {
             steps {
-                dir("${env.WORKSPACE}/Ch05/05_02-publish-reports"){
-                    sh 'python3 -m venv venv'
-                    sh './venv/bin/pip3 install --upgrade --requirement requirements.txt'
-                }
+                git branch: 'main',
+                    changelog: false,
+                    poll: false,
+                    url: 'https://github.com/LinkedInLearning/essential-jenkins-2468076.git'
             }
         }
-        stage('Lint') {
+        stage('Clean') {
             steps {
-                dir("${env.WORKSPACE}/Ch05/05_02-publish-reports"){
-                    sh 'venv/bin/flake8 --ignore=E501,E231 *.py'
-                    sh 'venv/bin/pylint --errors-only --disable=C0301 --disable=C0326 *.py'
+                dir("${env.WORKSPACE}/Ch05/05_04-challenge-create-artifacts-and-reports"){
+                    sh 'mvn clean'
                 }
             }
         }
         stage('Test') {
             steps {
-                dir("${env.WORKSPACE}/Ch05/05_02-publish-reports"){
-                    sh('''
-                        venv/bin/coverage run -m pytest -v test_*.py \
-                            --junitxml=pytest_junit.xml
-                    ''')
+                dir("${env.WORKSPACE}/Ch05/05_04-challenge-create-artifacts-and-reports"){
+                    sh 'mvn test'
                 }
             }
         }
-        stage('Build') {
+        stage('Package') {
             steps {
-                echo "Build the application in this step..."
-            }
-        }
-        stage('Deploy') {
-            steps {
-                echo "Deploy the application in this step..."
+                dir("${env.WORKSPACE}/Ch05/05_04-challenge-create-artifacts-and-reports"){
+                    sh 'mvn package -DskipTests'
+                }
             }
         }
     }
-
     post {
         always {
-            dir("${env.WORKSPACE}/Ch05/05_02-publish-reports"){
-                sh 'venv/bin/coverage xml'
-            }
+            junit allowEmptyResults: true,
+                testResults: '**/TEST-com.learningjenkins.AppTest.xml'
 
-            junit allowEmptyResults: true, testResults: '**/pytest_junit.xml'
-
-            junit allowEmptyResults: true, testResults: '**/pylint_junit.xml'
-
-            publishCoverage adapters: [cobertura('**/coverage.xml')],
-                sourceFileResolver: sourceFiles('STORE_LAST_BUILD')
+            archiveArtifacts allowEmptyArchive: true,
+                artifacts: '**/hello-1.0-SNAPSHOT.jar'
         }
     }
 }
